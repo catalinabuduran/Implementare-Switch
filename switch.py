@@ -6,16 +6,17 @@ import threading
 import time
 from wrapper import recv_from_any_link, send_to_link, get_switch_mac , get_interface_name
 
+#extrag date dintr-un cadru Ethernet
 def parse_ethernet_header(data):
     dest_mac = data[0:6]
     src_mac = data[6:12]
     
     ether_type = (data[12] << 8) + data[13]
 
-    vlan_id = -1
-    if ether_type == 0x8200:
+    vlan_id = -1 #vlan implicit
+    if ether_type == 0x8200: # daca EtherType indica un cadru VLAN
         vlan_tci = int.from_bytes(data[14:16], byteorder='big')
-        vlan_id = vlan_tci & 0x0FFF
+        vlan_id = vlan_tci & 0x0FFF #se citeste vlan id
         ether_type = (data[16] << 8) + data[17]
 
     return dest_mac, src_mac, ether_type, vlan_id
@@ -53,7 +54,7 @@ def get_data_from_config(file_path):
 
 def main():
     switch_id = sys.argv[1]
-    num_interfaces = wrapper.init(sys.argv[2:])
+    num_interfaces = wrapper.init(sys.argv[2:]) #initializez porturile
     interfaces = range(0, num_interfaces)
     file_data = get_data_from_config(f'configs/switch{switch_id}.cfg').split('\n')
 
@@ -105,7 +106,7 @@ def main():
         # verific daca adresa e unicast
         if is_unicast(dest_mac):
             if (dest_mac, vlan_id) in mac_table:
-                dest_interface = mac_table[(dest_mac, vlan_id)]
+                dest_interface = mac_table[(dest_mac, vlan_id)] #port destinatie
                 
                 # determin tipul portului de destinatie
                 is_dest_trunk = interface_types[get_interface_name(dest_interface)]['is_trunk']
@@ -127,7 +128,7 @@ def main():
             else:
                 # adresa MAC de destinatie nu se afla in tabela MAC =>flooding
                 for o in interfaces:
-                    if o != interface:
+                    if o != interface: #nu trimit cardul pt unde a venit
                         o_interface_name = get_interface_name(o)
                         is_out_trunk = interface_types[o_interface_name]['is_trunk']
                         
@@ -136,7 +137,7 @@ def main():
                                 send_to_link(o, length, data)
                             else:
                                 send_to_link(o, length + 4, add_vlan_tag(data, vlan_id))
-                        elif interface_types[o_interface_name]['vlan_id'] == vlan_id:
+                        elif interface_types[o_interface_name]['vlan_id'] == vlan_id: #daca portul de iesire este access
                             if source_is_trunk:
                                 send_to_link(o, length - 4, remove_vlan_tag(data))
                             else:
