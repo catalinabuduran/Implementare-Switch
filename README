@@ -1,0 +1,24 @@
+1 2
+Am implementat:
+- add_vlan_tag -care adauga VLAN TAG cadrului, conform cerintei
+- remove_vlan_tag -elimina VLAN TAG
+- is_unicast -verifica daca tabela MAC e unicast
+- get_data_from_config -citesc datele din switch0/1/2.cfg
+Pentru prima cerinta "Procesul de Comutare":
+  -inregistrarea adreselor MAC si interfețelor in tabela MAC
+  -trimiterea cadrelor catre interfata corecta pe baza tabelei
+  -flooding pentru cadrele cu adrese MAC necunoscute
+  -flooding pt broadcast/multicast
+Pentru implementarea acesteia nu a existat manipulare pentru TAG VLAN.
+Pentru a doua cerinta "VLAN":
+  -am citit datele din configs, pe baza acestora m am ajutat de un dictionar "interface_types", 
+unde setez variabila is_trunk in functie de topul portului, dar si vlan id in cazul in care e de tip access.
+Apoi in bucla principala de procesare a cadrelor Ethernet obtin informatii despre portul curent: nume, tip(trunk sau access cu ajutorul dictionarului utilizat mai sus),
+si vlan id in caz ca portul e de tip access. Apoi am actualizat adresa sursa si vlan id in tabela MAC.
+Daca adresa destinatie e unicast, daca se afla in tabela MAC, atunci trimit cadre in functie de tipul portului sursa si destinatie.
+In cazul in care adresa destinatie nu se afla in tabela sau nu este unicast, este necesar flooding, deci cadrul este trimis pe toate interfetele, cu exceptia celei de intrare.
+Cazurile verificate in trimiterea cadrelor:
+  - daca adresa sursa e trunk si destinatia e trunk - daca cadrul are deja un tag VLAN, il trimit asa cum e; daca cadrul nu are tag VLAN, ii adaug tag-ul VLAN si apoi il trimit
+  - daca adresa sursa e access si destinatia e trunk - adaug TAG VLAN-ul si dimensiunea cadrului creste cu 4 bytes
+  - daca adresa sursa e trunk si destinatia e access - daca cadrul are un tag VLAN, il elimin si apoi trimit cadrul pe portul access; daca nu are tag VLAN, il trimit direct
+  - daca adresa sursa e access si destinatia e access - trimit cadrul fara modificari
